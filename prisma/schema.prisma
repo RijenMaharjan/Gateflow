@@ -1,0 +1,212 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum ApiKeyStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+enum RateLimitStrategy {
+  SLIDING_WINDOW
+  FIXED_WINDOW
+  TOKEN_BUCKET
+}
+
+enum WebhookEventStatus {
+  PENDING
+  DELIVERED
+  FAILED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  TRIALING
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         UserRole @default(USER)
+
+  projects      Project[]
+  subscriptions Subscription[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Project {
+  id          String  @id @default(uuid())
+  userId      String
+  name        String
+  slug        String  @unique
+  upstreamUrl String
+  isActive    Boolean @default(true)
+
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  apiKeys        ApiKey[]
+  rateLimitRules RateLimitRule[]
+  webhookConfigs WebhookConfig[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("projects")
+}
+
+model ApiKey {
+  id         String       @id @default(uuid())
+  projectId  String
+  name       String
+  keyHash    String       @unique   // store only the hash, never the raw key
+  keyPrefix  String                 // e.g. "gw_live_xxxx" — shown in UI
+  status     ApiKeyStatus @default(ACTIVE)
+  expiresAt  DateTime?
+  lastUsedAt DateTime?
+
+  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  requestLogs   RequestLog[]
+  webhookEvents WebhookEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([keyHash])
+  @@map("api_keys")
+}
+
+model RateLimitRule {
+  id            String            @id @default(uuid())
+  projectId     String
+  maxRequests   Int
+  windowSeconds Int
+  strategy      RateLimitStrategy @default(SLIDING_WINDOW)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@map("rate_limit_rules")
+}
+
+model RequestLog {
+  id         String   @id @default(uuid())
+  apiKeyId   String
+  method     String
+  path       String
+  statusCode Int
+  latencyMs  Int
+  ipAddress  String
+
+  apiKey ApiKey @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  // partition-friendly index for time-based queries
+  @@index([apiKeyId, createdAt])
+  @@map("request_logs")
+}
+
+model WebhookConfig {
+  id        String   @id @default(uuid())
+  projectId String
+  url       String
+  secret    String   // HMAC signing secret
+  events    String[] // e.g. ["quota.exceeded", "key.revoked"]
+  isActive  Boolean  @default(true)
+
+  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  webhookEvents WebhookEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@map("webhook_configs")
+}
+
+model WebhookEvent {
+  id              String             @id @default(uuid())
+  apiKeyId        String
+  webhookConfigId String
+  eventType       String
+  payload         Json
+  status          WebhookEventStatus @default(PENDING)
+  attempts        Int                @default(0)
+
+  apiKey        ApiKey        @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+  webhookConfig WebhookConfig @relation(fields: [webhookConfigId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([webhookConfigId])
+  @@index([status])
+  @@map("webhook_events")
+}
+
+model Plan {
+  id                String  @id @default(uuid())
+  name              String  @unique   // "Free", "Pro", "Enterprise"
+  requestsPerMonth  Int
+  maxProjects       Int
+  maxApiKeys        Int
+  price             Decimal @db.Decimal(10, 2)
+
+  subscriptions Subscription[]
+
+  createdAt DateTime @default(now())
+
+  @@map("plans")
+}
+
+model Subscription {
+  id               String             @id @default(uuid())
+  userId           String
+  planId           String
+  status           SubscriptionStatus @default(TRIALING)
+  currentPeriodEnd DateTime
+  stripeSubId      String?            @unique
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan @relation(fields: [planId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("subscriptions")
+}
