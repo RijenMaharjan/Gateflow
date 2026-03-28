@@ -9,51 +9,44 @@ import * as bcrypt from 'bcrypt';
 import { AuthRepository } from './auth.repository';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { JwtPayload } from './strategies/jwt.strategy';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private repo: AuthRepository,
+    private readonly authRepository: AuthRepository,
     private jwtService: JwtService,
   ) {}
 
+  private signToken(userId: string, email: string){
+    const payload: JwtPayload = { sub: userId, email };
+    return{
+      accessToken: this.jwtService.sign(payload),
+    };
+  }
+
   async register(dto: RegisterDto) {
-    const existing = await this.repo.findByEmail(dto.email);
+    const existing = await this.authRepository.findUserByEmail(dto.email);
     if (existing) throw new ConflictException('Email already exists');
 
-    const hashed = await bcrypt.hash(dto.password, 10);
+    const passwordHash = await bcrypt.hash(dto.passwordHash, 10);
 
-    const user = await this.repo.create({
+    const user = await this.authRepository.createUser({
       ...dto,
-      password: hashed,
+      passwordHash,
     });
 
-    return this.generateTokens(user.id, user.email, user.role);
+    return this.signToken(user.id, user.email);
   }
 
   async login(dto: LoginDto) {
-    const user = await this.repo.findByEmail(dto.email);
-    if (!user) throw new UnauthorizedException();
+    const user = await this.authRepository.findUserByEmail(dto.email);
+    if (!user) throw new UnauthorizedException('Invalid credentials');
 
-    const valid = await bcrypt.compare(dto.password, user.password);
-    if (!valid) throw new UnauthorizedException();
+    const passwordMatch = await bcrypt.compare(dto.passwordHash, user.passwordHash);
+    if (!passwordMatch) throw new UnauthorizedException('Invalid credentials');
 
-    return this.generateTokens(user.id, user.email, user.role);
+    return this.signToken(user.id, user.email);
   }
 
-  async generateTokens(id: string, email: string, role: string) {
-    const payload = { sub: id, email, role };
-
-    const accessToken = this.jwtService.sign(payload, {
-      expiresIn: '15m',
-    });
-
-    const refreshToken = this.jwtService.sign(payload, {
-      expiresIn: '7d',
-    });
-
-    await this.repo.updateRefreshToken(id, refreshToken);
-
-    return { accessToken, refreshToken };
-  }
 }

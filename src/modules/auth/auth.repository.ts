@@ -5,18 +5,18 @@ import { PrismaService } from '../../prisma/prisma.service';
 export class AuthRepository {
   constructor(private prisma: PrismaService) {}
 
-  findByEmail(email: string) {
+  findUserByEmail(email: string) {
     return this.prisma.user.findUnique({ where: { email } });
   }
 
-  create(data: any) {
+  createUser(data: {email: string; passwordHash: string; name: string}) {
     return this.prisma.user.create({ data });
   }
 
-  updateRefreshToken(userId: string, token: string) {
-    return this.prisma.user.update({
-      where: { id: userId },
-      data: { refreshToken: token },
-    });
-  }
+  // updateRefreshToken(userId: string, token: string) {
+  //   return this.prisma.user.update({
+  //     where: { id: userId },
+  //     data: { refreshToken: token },
+  //   });
+  // }
 }
