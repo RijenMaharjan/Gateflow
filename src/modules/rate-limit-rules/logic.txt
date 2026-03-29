@@ -1,0 +1,17 @@
+FIXED WINDOW
+─────────────
+Window resets every N seconds from a fixed clock tick.
+│ 0s ──────── 60s │ 0s ──────── 60s │
+│  ✓ ✓ ✓ ✓ ✓ ✗  │  ✓ ✓ ...       │
+Problem: burst at window edge — 100 requests at 59s + 100 at 61s = 200 in 2 seconds.
+
+SLIDING WINDOW  ← we implement this in Redis later
+─────────────────
+Window moves with each request. Looks back N seconds from NOW.
+Smoother — no burst problem. Slightly more Redis memory.
+
+TOKEN BUCKET
+─────────────
+Bucket fills at a steady rate. Each request costs one token.
+Allows short bursts up to bucket size, then enforces the fill rate.
+Good for APIs that want to allow occasional spikes.
