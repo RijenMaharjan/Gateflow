@@ -1,0 +1,19 @@
+Incoming request
+  │
+  ├─ 1. Extract API key from header (x-api-key)
+  │
+  ├─ 2. Validate key — hash it, look it up in DB
+  │       └─ invalid/revoked/expired → 401/403
+  │
+  ├─ 3. Load rate limit rule for the project
+  │       └─ no rule → allow through (no limit configured)
+  │
+  ├─ 4. Check Redis — has this key hit its limit?
+  │       └─ over limit → 429 Too Many Requests
+  │
+  ├─ 5. Increment Redis counter for this key
+  │
+  ├─ 6. Proxy request to upstream URL
+  │       └─ upstream down → 502 Bad Gateway
+  │
+  └─ 7. Log the request to PostgreSQL (async, non-blocking)

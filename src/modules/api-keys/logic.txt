@@ -1,0 +1,19 @@
+User creates a key
+        │
+        ▼
+We generate:  gw_live_<32 random hex bytes>
+        │
+        ├── SHA-256 hash  →  stored in DB (keyHash column)
+        ├── Prefix        →  stored in DB (keyPrefix column) — safe to show in UI
+        └── Raw key       →  returned to user ONCE, never stored, never seen again
+
+On every gateway request:
+        │
+        ▼
+Caller sends:  x-api-key: gw_live_<32 random hex bytes>
+        │
+        ▼
+We SHA-256 hash the incoming key → look up keyHash in DB
+        │
+        ├── found + ACTIVE  →  allow
+        └── not found / REVOKED / EXPIRED  →  reject
