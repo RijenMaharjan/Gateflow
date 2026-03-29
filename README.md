@@ -9,5 +9,5 @@ I’m currently building a mini API Gateway with rate limiting. Think of it like
 
 Tech Stack 
 - Backend: Node.js + NestJS
-- Database: PostgreSQL / MongoDB
+- Database: PostgreSQL
 - Caching: Redis (for rate limiting)
