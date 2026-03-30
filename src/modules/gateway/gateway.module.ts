@@ -4,6 +4,7 @@ import { GatewayService } from './gateway.service';
 import { SlidingWindowStrategy } from './strategies/sliding-window.strategy';
 import { ApiKeysModule } from '../api-keys/api-keys.module';
 import { RateLimitRulesModule } from '../rate-limit-rules/rate-limit-rules.module';
+import { WebhooksModule } from '../webhooks/webhooks.module';
 import { RedisService } from '../../redis/redis.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -11,6 +12,7 @@ import { PrismaService } from '../../prisma/prisma.service';
   imports: [
     ApiKeysModule,        // for validateRawKey()
     RateLimitRulesModule, // for getActiveRuleForProject()
+    WebhooksModule,
   ],
   controllers: [GatewayController],
   providers: [

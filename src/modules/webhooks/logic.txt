@@ -1,0 +1,39 @@
+Gateway detects quota exceeded
+          │
+          ▼
+Creates a WebhookEvent record in DB (status: PENDING)
+          │
+          ▼
+Background worker polls for PENDING events every 5 seconds
+          │
+          ▼
+Worker picks up the event → sends HTTP POST to user's webhook URL
+          │
+          ├── 2xx response → mark DELIVERED, done
+          │
+          └── non-2xx / timeout / network error
+                    │
+                    ▼
+              increment attempts
+                    │
+                    ├── attempts < 3 → leave as PENDING, retry next poll
+                    └── attempts >= 3 → mark FAILED, stop retryingGateway detects quota exceeded
+          │
+          ▼
+Creates a WebhookEvent record in DB (status: PENDING)
+          │
+          ▼
+Background worker polls for PENDING events every 5 seconds
+          │
+          ▼
+Worker picks up the event → sends HTTP POST to user's webhook URL
+          │
+          ├── 2xx response → mark DELIVERED, done
+          │
+          └── non-2xx / timeout / network error
+                    │
+                    ▼
+              increment attempts
+                    │
+                    ├── attempts < 3 → leave as PENDING, retry next poll
+                    └── attempts >= 3 → mark FAILED, stop retrying

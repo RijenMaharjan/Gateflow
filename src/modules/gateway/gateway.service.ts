@@ -5,6 +5,7 @@ import { ApiKeysService } from '../api-keys/api-keys.service';
 import { RateLimitRulesService } from "../rate-limit-rules/rate-limit-rules.service";
 import { SlidingWindowStrategy } from "./strategies/sliding-window.strategy";
 import { PrismaService } from "../../prisma/prisma.service";
+import { WebhooksService } from "../webhooks/webhooks.service";
 
 @Injectable()
 export class GatewayService{
@@ -14,6 +15,7 @@ export class GatewayService{
         private readonly apiKeysService: ApiKeysService,
         private readonly rateLimitRulesService: RateLimitRulesService,
         private readonly slidingWindow: SlidingWindowStrategy,
+        private readonly webhooksService: WebhooksService,
         private readonly prisma: PrismaService,
     ){}
 
@@ -50,6 +52,20 @@ export class GatewayService{
 
             if(!allowed) {
                 res.setHeader('Retry-After', retryAfter);
+
+                  // dispatch webhook event — fire and forget
+                // never await this — the client is waiting for the 429 response
+                this.webhooksService
+                    .dispatchEvent(apiKey.id, project.id, 'quota.exceeded', {
+                    apiKeyId: apiKey.id,
+                    apiKeyName: apiKey.name,
+                    projectId: project.id,
+                    projectSlug: project.slug,
+                    limit: rule.maxRequests,
+                    windowSeconds: rule.windowSeconds,
+                    exceededAt: new Date().toISOString(),
+                    })
+    .catch(() => {}); // swallow errors — webhook failure must never affect the gateway
 
                 // log the blocked req before throwing
                 this.logRequest(apiKey.id, req.method, path, 429, Date.now() - startTime, req.ip ?? '');

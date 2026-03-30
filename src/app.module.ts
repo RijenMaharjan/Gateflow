@@ -7,6 +7,7 @@ import { ProjectsModule } from './modules/projects/projects.module';
 import { RateLimitRulesModule } from './modules/rate-limit-rules/rate-limit-rules.module';
 import { GatewayModule } from './modules/gateway/gateway.module';
 import { ApiKeysModule } from './modules/api-keys/api-keys.module';
+import { WebhooksModule } from './modules/webhooks/webhooks.module';
 
 @Module({
   imports: [
@@ -16,7 +17,8 @@ import { ApiKeysModule } from './modules/api-keys/api-keys.module';
     ProjectsModule,
     RateLimitRulesModule,
     GatewayModule,
-    ApiKeysModule
+    ApiKeysModule,
+    WebhooksModule,
   ],
 })
 export class AppModule {}
