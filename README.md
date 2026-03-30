@@ -25,3 +25,6 @@ The modules and what each one owns:
 - Request Logs exposes a paginated, filterable query interface over the traffic history — filter by method, status code, path, date range, or specific API key. Also exposes an aggregation endpoint for stats — total requests, average latency, error rate.
 - Webhooks implements the transactional outbox pattern — events are written to PostgreSQL synchronously, then a background worker polls every 5 seconds, delivers via HTTP POST with HMAC-SHA256 signatures, and retries up to 3 times on failure. Storing events in the DB means no events are lost on server restart.
 - Swagger auto-generates interactive documentation at /api/v1/docs with working examples, auth flows, and response schemas for every endpoint.
+
+
+*FYI used claude ai for coding help and learning the process.
