@@ -13,7 +13,9 @@ import { WebhooksService } from './webhooks.service';
 import { CreateWebhookConfigDto } from './dto/create-webhook-config.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { AuthenticatedRequest } from '../../common/interfaces/authenticated-request.interface';
+import { ApiBearerAuth } from '@nestjs/swagger/dist';
 
+@ApiBearerAuth('JWT')
 @UseGuards(JwtAuthGuard)
 @Controller('projects/:projectId/webhooks')
 export class WebhooksController {
